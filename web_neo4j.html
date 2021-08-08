@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>知识图谱</title>
+    <style>
+        #main {
+            width: 100%;
+            margin: 0;
+            background-color: white;
+            position: relative;
+        }
+
+        h1 {
+            margin: 0;
+            padding: .5em;
+        }
+
+        #console {
+            width: 100%;
+            vertical-align: top;
+        }
+
+        #runButton {
+            width: 100%;
+            height: 100%;
+            border-width: 0;
+            margin: 0;
+            font: bold 16px "Courier New";
+            cursor: pointer;
+            background-color: #008CC2;
+            color: #FFF;
+        }
+
+        body {
+            font: 15px "Courier New";
+            background-color:#9ae0bd;
+            margin: 0;
+            overflow-y: scroll;
+        }
+        /* body {
+            background-color: #9ae0bd;
+            padding: 30px 40px;
+            text-align: center;
+            font-family: OpenSans-Light, PingFang SC, Hiragino Sans GB, Microsoft Yahei, Microsoft Jhenghei, sans-serif;
+        } */
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td {
+            position: relative;
+            padding: 0;
+        }
+
+        #results table {
+            width: auto;
+            background-color: #EEE;
+            font-size: 13px;
+        }
+
+        #results th {
+            border-right: 1px solid #DDD;
+            border-bottom: 1px solid #DDD;
+            padding: 3px 5px;
+            background-color: #999;
+            color: #FFF;
+        }
+
+        #results td {
+            border-right: 1px solid #BBB;
+            border-bottom: 1px solid #BBB;
+            padding: 3px 5px;
+            vertical-align: top;
+        }
+
+        form {
+            position: relative;
+        }
+
+        textarea {
+            border-width: 0;
+            font: 15px "Courier New";
+            margin: 0;
+            width: 100%;
+            resize: vertical;
+            min-height: 36px;
+            height: 72px;
+            padding: 0;
+            background-color: transparent;
+            vertical-align: top;
+        }
+
+        #parameters {
+            font: 13px "Courier New";
+        }
+
+        #parameters td {}
+
+        #parameters input[type=text] {
+            border-width: 0;
+            background-color: transparent;
+            color: #FFF;
+            font: 13px "Courier New";
+            padding: 0;
+            margin: 0;
+        }
+
+        #parameters input[type=button] {
+            font: 13px "Courier New";
+            padding: 0 2px;
+        }
+
+
+        .links line {
+            stroke: rgb(201, 17, 17);
+            stroke-opacity: 0.6;
+        }
+
+        .nodes circle {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+
+        /*折叠数据*/
+        .list {
+            display: none;
+            height: auto;
+            margin: 0;
+            float: left;
+        }
+
+        .show {
+            display: none;
+        }
+
+        .hide:target+.show {
+            display: inline;
+        }
+
+        .hide:target {
+            display: none;
+        }
+
+        .hide:target~.list {
+            display: inline;
+        }
+
+        /*style the (+) and (-) */
+        .hide,
+        .show {
+            width: 30px;
+            height: 30px;
+            border-radius: 30px;
+            font-size: 20px;
+            color: #fff;
+            text-shadow: 0 1px 0 #666;
+            text-align: center;
+            text-decoration: none;
+            box-shadow: 1px 1px 2px #000;
+            background: #cccbbb;
+            opacity: .95;
+            margin-right: 0;
+            float: left;
+            margin-bottom: 25px;
+        }
+
+        .hide:hover,
+        .show:hover {
+            color: #eee;
+            text-shadow: 0 0 1px #666;
+            text-decoration: none;
+            box-shadow: 0 0 4px #222 inset;
+            opacity: 1;
+            margin-bottom: 25px;
+        }
+
+        #search input {
+            position: absolute;
+            top: 500px;
+            left: 60px;
+            color: #fff;
+            border: none;
+            outline: none;
+            box-shadow: none;
+            width: 200px;
+            height: 50px;
+            background-color: #666;
+        }
+
+        .links line.inactive {
+            /*display: none !important;*/
+            stroke-opacity: 0;
+        }
+
+        .nodes circle.inactive {
+            display: none !important;
+        }
+
+        #info {
+            position: absolute;
+            bottom: 40px;
+            right: 30px;
+            text-align: right;
+            width: 270px;
+        }
+
+        /* 字变白色 */
+        #info p {
+            color: #fff;
+            font-size: 12px;
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+
+        /* 详细信息题头便黑色 */
+        #info p span {
+            color: #888;
+            margin-right: 10px;
+        }
+
+        #info h4 {
+            color: #fff;
+        }
+    </style>
+    <script src="neo4j-web.js"></script>
+
+    <!-- <script src="https://d3js.org/d3.v4.min.js"></script> -->
+    <script src="http://cdn.bootcss.com/jquery/2.1.4/jquery.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <link href="http://cdn.bootcss.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <script src="http://cdn.bootcss.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+
+    <div id="main">
+        <h1 align="center" style="color:rgb(125,81,144)">知识图谱</h1>
+        <hr>
+        <div>
+            bolt url:<input type="text" id="bolturl" value="bolt://localhost:7687" />
+            user name: <input type="text" id="username" value="neo4j" />
+            password: <input type="text" id="password" value="Graph" />
+            <input id="connectserver" type="button" value="Connect">
+        </div>
+        <hr>
+
+        <button id="getAlldata" type="submit" onclick="getAlldata();run();" value="match (a:Person)-[p:ACTED_IN]->(b:Movie) return a,b,p">查询所有信息</button>
+
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td id="console">
+                    <form>
+                        <table>
+                            <tr>
+                                <td style="width:75%;padding:2px 2px 2px 4px;background-color:#FFF;vertical-align:top"
+                                    rowspan="2"><textarea id="statement"></textarea></td>
+                                <td style="width:25%;vertical-align:top;background-color:#0F5788;color:#FFF">
+                                    <table id="parameters">
+                                        <tbody>
+                                            <tr>
+                                                <td><input type="text" id="key" placeholder="(parameter)"></td>
+                                                <td><input type="text" id="value" placeholder="(value)"></td>
+                                                <td width="20"><input id="addParameter" type="button" value="+"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width:25%;height:40px;vertical-align:bottom;background-color:#0F5788"><input
+                                        id="runButton" type="button" value="RUN" onfocus="this.blur()"></td>
+                            </tr>
+                        </table>
+                    </form>
+
+
+                    <a href="#hide1" class="hide" id="hide1">+</a>
+                    <a href="#show1" class="show" id="show1">-</a>
+
+                    <p>
+                    <div class="list" id="results"></div>
+                    </p>
+                    <br><br>
+                    <div class="question"> <svg width="1500" height="700" id="svg1"></svg> </div>
+
+                </td>
+            </tr>
+        </table>
+        <div id="search">
+            <input type="text" class="form-control">
+        </div>
+        <div id="info">
+            <h4></h4>
+        </div>
+    </div>
+
+    <script>
+
+        var driver;
+        var session;
+        var cypher;
+        var linkLine;
+
+        // 获取参数
+        function getAlldata() {
+            cypher = document.getElementById("getAlldata").getAttribute("value");
+            console.log(cypher);
+        }
+
+        // 连接neo4j 获取输入的用户名 密码
+        function connectServer() {
+            var bolturl = document.getElementById("bolturl").value;
+            var username = document.getElementById("username").value;
+            var password = document.getElementById("password").value;
+
+            var authToken = neo4j.v1.auth.basic(username, password);
+            console.log(authToken);
+
+            driver = neo4j.v1.driver(bolturl, authToken, {
+                encrypted: false   // 加密方式  不加密
+            });
+            session = driver.session();
+            alert("neo4j数据库连接成功")
+
+        }
+
+        // 运行 Cyher语言 并输出查询数据结果
+
+        function run() {
+            if (!session) { alert("请先连接到数据库！"); return; }
+            var statement = document.getElementById("statement").value;
+            if (!statement) {
+                statement = cypher;
+                console.log(statement);
+            }
+            var parameters = {};
+
+            var table = document.createElement("table");
+            var graph = { links: [], nodes: [] };  // 存放D3.js的数据
+
+            session.run(statement, parameters).subscribe({
+                onNext: function (record) {
+                    var tr = document.createElement("tr");
+
+                    record.forEach(function (value) {
+                        // 用来拼接到Table上
+                        // console.log(value);
+                        var td = document.createElement("td");
+                        td.appendChild(document.createTextNode(value));
+                        tr.appendChild(td);
+                        // console.log(value.end);
+                        // 用来组装D3.js的数据，将节点拼装成 {id:"****",group:1}的格式，然后push到graph.nodes数组里
+                        // 将关系拼装成{"source":"Napoleon","target":"Myriel","value":1}的格式，然后push到graph.links数据里
+                        if (value.start && value.end) {  //关系
+                            graph.links.push({ source: value.start.low, target: value.end.low, value: 3, type: value.type })
+                            console.log("关系数据：" + graph.links);
+
+                        }
+                        else {// 节点
+
+                            var titleval = value.properties.name ? value.properties.name : value.properties.title;
+                            var item = { id: value.identity.low, label: value.labels[0], title: titleval, group: graph.nodes.length };
+
+                            if (!graph.nodes.find((e) => (e.id == value.identity.low))) {
+                                graph.nodes.push(item);
+                            }
+                        }
+
+                    });
+                    table.appendChild(tr);
+                },
+                // 节点信息输出完成之后 进行数据图的绘制
+                onCompleted: function (metadata) {
+                    showGraph(graph);
+                }
+
+            });
+            //***********************************************
+
+            //***********************************************
+            var results = document.getElementById("results");
+
+            while (results.childElementCount > 0) {
+                results.removeChild(results.children[0]);
+            }
+            results.appendChild(table);
+            console.log(results);
+        }
+
+
+        document.getElementById("connectserver").onclick = connectServer;
+        document.getElementById("runButton").onclick = run;
+
+
+        // 使用D3.js 对 graph 参数里面的图数据进行展示
+        var showGraph = function (graph) {
+             console.log(graph);
+
+            console.log(graph.links);
+            console.log(graph.nodes);
+            var svg = d3.select("#svg1"),
+                width = +svg.attr("width"),
+                height = +svg.attr("height");
+
+            var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+
+
+
+            //利用d3.forceSimulation()定义关系图 包括设置边link、排斥电荷charge、关系图中心点
+		    var simulation = d3.forceSimulation()
+	            .force("link", d3.forceLink().id(function(d) {
+	                return d.id;
+	            }))
+	            .force("charge", d3.forceManyBody())
+	            .force("center", d3.forceCenter(width / 2, height / 2));
+
+            var dragDrop = d3.drag().on('start', function (node) {
+                node.fx = node.x
+                node.fy = node.y
+            }).on('drag', function (node) {
+                simulation.alphaTarget(0.4).restart()
+                node.fx = d3.event.x
+                node.fy = d3.event.y
+            }).on('end', function (node) {
+                if (!d3.event.active) {
+                    simulation.alphaTarget(0)
+                }
+                node.fx = null
+                node.fy = null
+            })
+
+
+
+
+            //D3映射数据至HTML中
+	    	//g用于绘制所有边,selectALL选中所有的line,并绑定数据data(graph.links),enter().append("line")添加元素
+	    	//数据驱动文档,设置边的粗细
+	    	//前面定义var svg = d3.select("#svg1")
+	    	var link = svg.append("g").attr("class","links").selectAll("line").data(graph.links)
+	    	.enter().append("line").attr("stroke-width", 10)
+
+
+            var linksText = svg.selectAll(".linetext")
+                .attr("class", "texts")
+                .data(graph.links)
+                .enter()
+                .append("text")
+                .text(function (d) {
+                    return d.type;
+                })
+
+            var node = svg.selectAll("circle")
+                .attr("class", "nodes")
+                .data(graph.nodes)
+                .enter()
+                .append("circle")
+                .attr("r", 15)
+                .attr("fill", function (d) { return color(d.group); })
+                .call(dragDrop)
+
+
+            //添加描述节点的文字
+            var svg_texts = svg.selectAll("nodetext")
+                .attr("class", "texts")
+                .data(graph.nodes)
+                .enter()
+                .append("text")
+                .style("fill", "black")
+                .attr("dx", 20)
+                .attr("dy", 8)
+                .text(function (d) {
+                    return d.title;
+                });
+
+            //节点上的标签
+            node.append("title")
+                .text(function (d) { return d.id; });
+
+            simulation
+                .nodes(graph.nodes)
+                .on("tick", ticked);
+
+            simulation.force("link")
+                .links(graph.links)
+                .distance(function (d) {//每一边的长度
+                    return d.value * 50;
+                })
+
+            function ticked() {
+
+                //没问题
+                link
+                    .attr("x1", function (d) { return d.source.x; })
+                    .attr("y1", function (d) { return d.source.y; })
+                    .attr("x2", function (d) { return d.target.x; })
+                    .attr("y2", function (d) { return d.target.y; });
+
+                linksText
+                    .attr("x", function (d) {
+                        return (d.source.x + d.target.x) / 2;
+                    })
+                    .attr("y", function (d) {
+                        return (d.source.y + d.target.y) / 2;
+                    });
+
+                node
+                    .attr("cx", function (d) { return d.x; })
+                    .attr("cy", function (d) { return d.y; });
+                svg_texts
+                    .attr("x", function (d) { return d.x; })
+                    .attr("y", function (d) { return d.y; });
+
+
+
+                //**************************************************************
+                $('#search input').keyup(function (event) {
+                    //如果Input值是空的显示所有的圆和线(没有进行筛选)
+                    if ($(this).val() == '') {
+                        d3.select('#svg1 .texts').selectAll('text').attr('class', '');
+                        d3.select('#svg1 .nodes').selectAll('circle').attr('class', '');
+                        d3.select('#svg1 .links').selectAll('line').attr('class', '');
+
+                    }
+
+                    //否则判断判断三个元素是否等于name值，等于则显示该值
+                    else {
+                        var name = $(this).val();
+                        //搜索所有的节点
+                        d3.select('#svg1 .nodes').selectAll('circle').attr('class', function (d) {
+                            //输入节点id的小写等于name则显示，否则隐藏
+                            if (d.title.indexOf(name) >= 0) {
+                                return '';
+                                console.log(d);
+                            } else {
+                                //优化：与该搜索节点相关联的节点均显示
+                                //links链接的起始节点进行判断,如果其id等于name则显示这类节点
+                                //注意: graph=data
+                                for (var i = 0; i < graph.links.length; i++) {
+                                    //如果links的起点等于name，并且终点等于正在处理的则显示
+                                    if ((graph.links[i]['source'].indexOf(name) >= 0) &&
+                                        (graph.links[i]['target'] == d.title)) {
+
+                                        return '';
+                                    }
+                                    //如果links的终点等于name，并且起点等于正在处理的则显示
+                                    if ((graph.links[i]['target'].title.indexOf(name) >= 0) &&
+                                        (graph.links[i]['source'].title == d.title)) {
+                                        return '';
+                                    }
+                                }
+
+                                return 'inactive'; //隐藏其他节点
+                            }
+
+                        });
+
+
+                        //搜索texts
+                        d3.select('#svg1 .texts').selectAll('text').attr('class', function (d) {
+                            if (d.id.indexOf(name) >= 0) {
+                                return '';
+                            } else {
+                                //优化：与该搜索节点相关联的节点均显示
+                                //links链接的起始节点进行判断,如果其id等于name则显示这类节点
+                                //注意: graph=data
+                                for (var i = 0; i < graph.links.length; i++) {
+                                    //如果links的起点等于name，并且终点等于正在处理的则显示
+                                    if ((graph.links[i]['source'].title.indexOf(name) >= 0) &&
+                                        (graph.links[i]['target'].title == d.title)) {
+                                        console.log(graph.links[i]['target'].title);
+                                        return '';
+                                    }
+                                    //如果links的终点等于name，并且起点等于正在处理的则显示
+                                    if ((graph.links[i]['target'].title.indexOf(name) >= 0) &&
+                                        (graph.links[i]['source'].title == d.title)) {
+                                        return '';
+                                    }
+                                }
+
+                                return 'inactive'; //隐藏其他节点
+                            }
+                        });
+
+
+                        //搜索links 所有与搜索name相关联的边均显示
+                        //显示相的邻边 注意 ||
+                        //name=$(this).val()：名字为键盘输入的内容
+                        d3.select("#svg1 .links").selectAll('line').attr('class', function (d) {
+                            if ((d.source.title.indexOf(name) >= 0) ||
+                                (d.target.title.indexOf(name) >= 0)
+                            ) {
+                                // console.log(d.source.title);
+                                // console.log(d.target.title);
+                                return '';
+                            } else {
+                                return 'inactive'; //隐藏
+                            }
+                        });
+
+                    }
+                }); //end input
+
+            }
+        }
+
+        // function started(d) {
+        //     if (!d3.event.active)
+        //         simulation.alphaTarget(0.4).restart();//设置衰减系数，对节点位置移动过程的模拟，数值越高移动越快，数值范围[0，1]
+
+        //     d.fx = d.x;
+        //     d.fy = d.y;
+        // }
+        // function dragging(d) {
+        //     d.fx = d3.event.x;
+        //     d.fy = d3.event.y;
+        // }
+        // function ended(d) {
+        //     if (!d3.event.active)
+        //         simulation.alphaTarget(0);
+
+        //     d.fx = null;
+        //     d.fy = null;
+        // }
+
+        //搜索框中输入内容则响应该事件
+        //keyup按键敲击响应event
+
+
+
+    </script>
+
+
+</body>
+
+</html>

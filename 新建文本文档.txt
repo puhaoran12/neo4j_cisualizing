@@ -1,0 +1,3 @@
+create (a:一年级{name:'1'})-[p1:师兄]->(b:二年级{name:'2'})-[p2:师兄]->(c:三年级{name:'3'})
+
+match (a:一年级{name:'1'})-[p1:师兄]->(b:二年级{name:'2'})-[p2:师兄]->(c:三年级{name:'3'}) return a,b,c,p1,p2
